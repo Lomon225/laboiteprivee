@@ -1,0 +1,101 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <title>LaBoitePrivée - Messagerie 100% Privée</title>
+    <style>
+        *{margin:0;padding:0;box-sizing:border-box;}
+        body{background:linear-gradient(135deg,#1e3c72,#2a5298);font-family:'Segoe UI',sans-serif;color:white;min-height:100vh;display:flex;align-items:center;justify-content:center;padding:20px;}
+        .container{max-width:800px;width:100%;background:rgba(255,255,255,0.1);backdrop-filter:blur(20px);border-radius:20px;padding:40px;box-shadow:0 20px 40px rgba(0,0,0,0.3);border:1px solid rgba(255,255,255,0.2);}
+        h1{text-align:center;margin-bottom:30px;font-size:2.5em;background:linear-gradient(45deg,#ff6b6b,#feca57);background-clip:text;-webkit-background-clip:text;-webkit-text-fill-color:transparent;}
+        .room-section{margin-bottom:30px;text-align:center;}
+        #roomInput{width:100%;padding:15px;font-size:1.1em;border:none;border-radius:10px;margin-bottom:15px;background:rgba(255,255,255,0.2);color:white;}
+        #roomInput::placeholder{color:#ccc;}
+        .btn{padding:15px 30px;font-size:1.1em;border:none;border-radius:10px;background:linear-gradient(45deg,#ff6b6b,#feca57);color:white;cursor:pointer;transition:all 0.3s;font-weight:bold;}
+        .btn:hover{transform:translateY(-2px);box-shadow:0 10px 20px rgba(255,107,107,0.4);}
+        #chatContainer{display:none;}
+        #messages{max-height:400px;overflow-y:auto;background:rgba(255,255,255,0.1);border-radius:15px;padding:20px;margin-bottom:20px;border:1px solid rgba(255,255,255,0.2);}
+        .message{padding:12px 16px;margin-bottom:10px;border-radius:15px;background:rgba(255,255,255,0.15);word-wrap:break-word;}
+        #messageInput{display:flex;gap:10px;}
+        #messageInput input{flex:1;padding:15px;border:none;border-radius:10px;background:rgba(255,255,255,0.2);color:white;font-size:1em;}
+        #messageInput input::placeholder{color:#ccc;}
+        .status{color:#feca57;font-weight:bold;margin-bottom:10px;text-align:center;}
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🔒 LaBoitePrivée</h1>
+        <div class="room-section">
+            <input id="roomInput" placeholder="Code secret partagé (ex: monchat123)" maxlength="20">
+            <br><br>
+            <button class="btn" onclick="joinLaBoite()">🚀 Connexion Privée</button>
+        </div>
+        <div id="chatContainer">
+            <div id="status" class="status"></div>
+            <div id="messages"></div>
+            <div id="messageInput">
+                <input id="msgInput" placeholder="Votre message secret..." onkeypress="if(event.key==='Enter') sendMessage()">
+                <button class="btn" onclick="sendMessage()">📤 Envoyer</button>
+            </div>
+        </div>
+    </div>
+
+    <script src="/socket.io/socket.io.js"></script>
+    <script>
+      const socket = io();
+      let currentRoom = null;
+
+      const statusEl = document.getElementById('status');
+      const messagesEl = document.getElementById('messages');
+      const chatContainer = document.getElementById('chatContainer');
+      const roomInput = document.getElementById('roomInput');
+      const msgInput = document.getElementById('msgInput');
+
+      function addMessage(text) {
+        const div = document.createElement('div');
+        div.className = 'message';
+        div.textContent = text;
+        messagesEl.appendChild(div);
+        messagesEl.scrollTop = messagesEl.scrollHeight;
+      }
+
+      function joinLaBoite() {
+        const room = roomInput.value.trim();
+        if (!room) {
+          alert('Entre un code secret');
+          return;
+        }
+        currentRoom = room;
+        socket.emit('join-room', room);
+        statusEl.textContent = '✅ Connecté à la boîte : ' + room;
+        chatContainer.style.display = 'block';
+      }
+
+      function sendMessage() {
+        const msg = msgInput.value.trim();
+        if (!msg) return;
+        if (!currentRoom) {
+          addMessage('⚠️ Tu dois d’abord te connecter à une boîte.');
+          return;
+        }
+        // Afficher mon message
+        addMessage('Moi: ' + msg);
+        // Envoyer au serveur pour l’ami
+        socket.emit('chat-message', {
+          room: currentRoom,
+          text: msg
+        });
+        msgInput.value = '';
+      }
+
+      // Réception des messages de l’ami
+      socket.on('chat-message', (data) => {
+        addMessage(data.from + ': ' + data.text);
+      });
+
+      // Rendre les fonctions accessibles aux boutons HTML
+      window.joinLaBoite = joinLaBoite;
+      window.sendMessage = sendMessage;
+    </script>
+</body>
+</html>
